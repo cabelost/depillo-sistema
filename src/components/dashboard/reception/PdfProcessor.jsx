@@ -146,7 +146,7 @@ const PdfProcessor = () => {
     };
     
     const handleSave = async () => {
-        if (!extractedData || !supabase) return;
+        if (!extractedData) return;
         setIsLoading(true);
 
         const { error } = await supabase
@@ -191,7 +191,7 @@ const PdfProcessor = () => {
                 onChange={(e) => processPdf(e.target.files[0])}
                 className="hidden"
             />
-            <Button onClick={() => fileInputRef.current.click()} className="w-full" variant="outline" disabled={isLoading || !supabase}>
+            <Button onClick={() => fileInputRef.current.click()} className="w-full" variant="outline" disabled={isLoading}>
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2" />}
                 {isLoading ? 'Processando...' : 'Carregar PDF'}
             </Button>
@@ -217,7 +217,7 @@ const PdfProcessor = () => {
                         </ul>
                     </div>
                     <p className="font-bold"><strong>Total:</strong> R$ {extractedData.valor_total}</p>
-                    <Button onClick={handleSave} className="w-full mt-2 bg-red-600 hover:bg-red-700" disabled={isLoading || !supabase}>
+                    <Button onClick={handleSave} className="w-full mt-2 bg-red-600 hover:bg-red-700" disabled={isLoading}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2" />}
                         Salvar no Histórico
                     </Button>

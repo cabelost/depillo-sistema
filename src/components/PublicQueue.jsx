@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/customSupabaseClient';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
@@ -11,7 +10,6 @@ const PublicQueue = ({ onLogout }) => {
   const [attending, setAttending] = useState(null);
 
   const fetchData = useCallback(async () => {
-    if (!supabase) return;
     const { data, error } = await supabase
       .from('depiladoras_status')
       .select('id, name, status, last_login')
@@ -38,7 +36,6 @@ const PublicQueue = ({ onLogout }) => {
   }, [attending]);
 
   useEffect(() => {
-    if (!supabase) return;
     fetchData();
     const channel = supabase
       .channel('public:depiladoras_status_public_queue')
@@ -114,10 +111,7 @@ const PublicQueue = ({ onLogout }) => {
                   </motion.div>
                 ))}
               </AnimatePresence>
-              {depiladorasStatus.length === 0 && !attending && !supabase && (
-                 <p className="text-center text-gray-400 py-8 text-xl">Aguardando conexão com o sistema...</p>
-              )}
-              {depiladorasStatus.length === 0 && !attending && supabase && (
+              {depiladorasStatus.length === 0 && !attending && (
                  <p className="text-center text-gray-400 py-8 text-xl">Nenhuma depiladora na fila.</p>
               )}
             </div>

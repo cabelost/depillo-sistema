@@ -22,29 +22,6 @@ const FileProcessor = ({ onProcessFile, onBack, preferentialTargetName }) => {
     return workerRef.current;
   };
 
-  const preprocessImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          ctx.filter = 'grayscale(1) contrast(1.5)';
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = reject;
-        img.src = e.target.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const onDrop = useCallback(async (acceptedFiles) => {
     const selectedFile = acceptedFiles[0];
     if (selectedFile) {
@@ -59,56 +36,55 @@ const FileProcessor = ({ onProcessFile, onBack, preferentialTargetName }) => {
       });
 
       try {
-        const preprocessedImage = await preprocessImage(selectedFile);
         const worker = await initializeTesseract();
-        const { data: { text } } = await worker.recognize(preprocessedImage);
+        const { data: { text } } = await worker.recognize(selectedFile);
         
         const orderNumberMatch = text.match(/Nº:?\s*(\d+)/i);
         const dateMatch = text.match(/Data:?\s*(\d{2}\/\d{2}\/\d{4}\s*\d{2}:\d{2}:\d{2})/i);
         const clientNameMatch = text.match(/Cliente:?\s*([^\n(]*)/i);
         const totalValueMatch = text.match(/TOTAL\s+([\d,.]+)/i);
 
+        const itemsBlockMatch = text.match(/Qtd\.\s+Item[\s\S]*?(?:TOTAL|Parc\.)/i);
         let services = [];
-        const lines = text.split('\n');
-        let capturing = false;
-
-        lines.forEach(line => {
-            if (/Qtd\.\s+Item/.test(line)) {
-                capturing = true;
-                return;
-            }
-            if (/TOTAL|Parc\./.test(line)) {
-                capturing = false;
-                return;
-            }
-            if (capturing) {
-                const serviceMatch = line.match(/^\s*\d+\s+(.*?)(?:\s+[\d,.-]+)?$/);
-                if (serviceMatch && serviceMatch[1]) {
-                    const cleanedService = serviceMatch[1]
-                      .replace(/Profissional:?.*/i, '')
-                      .replace(/Depil\s*Linha\s*-\s*/i, '')
-                      .replace(/\s+[\d,.]+\s*$/, '')
-                      .trim();
-                    if(cleanedService && cleanedService.length > 2) {
-                        services.push(cleanedService);
+        if (itemsBlockMatch) {
+            const lines = itemsBlockMatch[0].split('\n');
+            let capturing = false;
+            lines.forEach(line => {
+                if (/Qtd\.\s+Item/.test(line)) {
+                    capturing = true;
+                    return;
+                }
+                if (/TOTAL|Parc\./.test(line)) {
+                    capturing = false;
+                    return;
+                }
+                if (capturing) {
+                    const serviceMatch = line.match(/^\d+\s+(.*?)(?:\s+[\d,.-]+)?$/);
+                    if (serviceMatch && serviceMatch[1]) {
+                        const cleanedService = serviceMatch[1]
+                          .replace(/Profissional:?.*/i, '')
+                          .replace(/Depil\s*Linha\s*-\s*/, '') // Clean "Depil Linha - "
+                          .trim();
+                        if(cleanedService && cleanedService.length > 1) {
+                            services.push(cleanedService);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         
         const data = {
             orderNumber: orderNumberMatch ? orderNumberMatch[1].trim() : null,
             attendanceDate: dateMatch ? dateMatch[1].trim() : null,
-            clientName: clientNameMatch ? clientNameMatch[1].replace(/\(teste\)/i, '').trim() : null,
+            clientName: clientNameMatch ? clientNameMatch[1].trim() : null,
             services: services.length > 0 ? services.join(', ') : null,
             totalValue: totalValueMatch ? parseFloat(totalValueMatch[1].replace(/\./g, '').replace(',', '.')) : null,
         };
 
         if (!data.orderNumber || !data.attendanceDate || !data.clientName || !data.services || data.totalValue === null) {
-            console.log("Extraction failed. Data found:", data);
             toast({
                 title: "⚠️ Falha na Extração",
-                description: "Não foi possível ler todos os dados da comanda. Tente uma imagem mais nítida ou com melhor iluminação.",
+                description: "Não foi possível ler todos os dados da comanda. Tente uma imagem mais nítida.",
                 variant: "destructive",
             });
             setExtractedData(null);
@@ -124,7 +100,7 @@ const FileProcessor = ({ onProcessFile, onBack, preferentialTargetName }) => {
         console.error("OCR Error:", error);
         toast({
           title: "❌ Erro ao ler imagem",
-          description: "Ocorreu um erro inesperado durante o processamento. Tente novamente.",
+          description: "Ocorreu um erro inesperado durante o processamento.",
           variant: "destructive",
         });
       } finally {

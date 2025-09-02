@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/customSupabaseClient';
 
 export const useOrderManagement = ({ currentUser, depiladoras, queue, toast }) => {
   const [activeAttendanceId, setActiveAttendanceId] = useState(() => JSON.parse(sessionStorage.getItem('activeAttendanceId')) || null);
@@ -10,10 +9,6 @@ export const useOrderManagement = ({ currentUser, depiladoras, queue, toast }) =
   }, [activeAttendanceId]);
 
   const processAndAssignOrder = async (orderData, targetDepiladoraId = null) => {
-    if (!supabase) {
-        toast({ title: "❌ Integração Incompleta", description: "A integração do Supabase é necessária para criar atendimentos.", variant: "destructive" });
-        return;
-    }
     const { clientName, service, details, orderNumber, totalValue, attendanceDate } = orderData;
     let depiladora;
 
@@ -73,7 +68,6 @@ export const useOrderManagement = ({ currentUser, depiladoras, queue, toast }) =
   };
 
   const startAttendance = async (orderId) => {
-    if (!supabase) return;
     const { error } = await supabase.from('orders').update({ status: 'in-progress', start_time: new Date().toISOString() }).eq('id', orderId);
     if (error) {
         toast({ title: "❌ Erro ao iniciar", variant: "destructive", description: error.message });
@@ -83,12 +77,10 @@ export const useOrderManagement = ({ currentUser, depiladoras, queue, toast }) =
   };
 
   const updateObservation = async (orderId, text) => {
-    if (!supabase) return;
     await supabase.from('orders').update({ observations: text }).eq('id', orderId);
   };
 
   const finishAttendance = async (orderId) => {
-    if (!supabase) return;
     if (!currentUser || !currentUser.id) {
         toast({ title: "❌ Erro de Autenticação", description: "Não foi possível identificar o usuário para finalizar o atendimento.", variant: "destructive" });
         return;
@@ -111,7 +103,6 @@ export const useOrderManagement = ({ currentUser, depiladoras, queue, toast }) =
   };
 
   const forceFinishAttendance = async (orderId, depiladoraId) => {
-    if (!supabase) return;
     if (currentUser.role !== 'recepcao') {
       toast({ title: "🚫 Acesso Negado", description: "Apenas a recepção pode forçar a finalização.", variant: "destructive" });
       return;

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,10 +17,6 @@ const AttendanceHistory = ({ onBack }) => {
     const { toast } = useToast();
 
     const fetchAttendances = useCallback(async () => {
-        if (!supabase) {
-          setLoading(false);
-          return;
-        }
         setLoading(true);
         const { data, error } = await supabase
             .from('atendimentos')
@@ -38,7 +33,6 @@ const AttendanceHistory = ({ onBack }) => {
     }, [toast]);
 
     useEffect(() => {
-        if (!supabase) return;
         fetchAttendances();
         
         const channel = supabase.channel('public:atendimentos')
@@ -89,14 +83,11 @@ const AttendanceHistory = ({ onBack }) => {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10"
-                            disabled={!supabase}
                         />
                     </div>
                     
                     <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-2">
-                        {!supabase ? (
-                           <p className="text-center text-slate-500 py-8">Integração do Supabase não configurada.</p>
-                        ) : loading ? (
+                        {loading ? (
                             <p className="text-center text-slate-500 py-8">Carregando...</p>
                         ) : filteredAttendances.length > 0 ? (
                             filteredAttendances.map(att => (

@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 
 const notificationSoundUrl = '/notification.mp3';
@@ -13,7 +12,6 @@ export const useSupabaseRealtime = (currentUser) => {
   const { play: playNotification, unlockAudio } = useAudioPlayer(notificationSoundUrl);
   
   const fetchDepiladorasAndStatus = useCallback(async () => {
-    if (!supabase) return;
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('id, full_name, role')
@@ -41,15 +39,12 @@ export const useSupabaseRealtime = (currentUser) => {
   }, []);
 
   const fetchOrders = useCallback(async () => {
-     if (!supabase) return;
      const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*');
       if (ordersError) console.error("Error fetching orders:", ordersError);
       else setOrders(ordersData || []);
   }, []);
 
   useEffect(() => {
-    if (!supabase) return;
-
     const statusChannel = supabase.channel('public:depiladoras_status')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'depiladoras_status' }, fetchDepiladorasAndStatus)
       .subscribe();

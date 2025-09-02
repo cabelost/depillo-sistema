@@ -1,27 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import LoginPage from '@/components/LoginPage';
 import Dashboard from '@/components/Dashboard';
 import PublicQueue from '@/components/PublicQueue';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 function App() {
-  const { session, user, signOut: authSignOut, signIn: authSignIn } = useAuth();
+  const { session, user, signOut } = useAuth();
   const [currentUserData, setCurrentUserData] = useState(null);
   const { toast } = useToast();
-  
-  const showIntegrationToast = () => {
-    toast({
-        variant: "destructive",
-        title: "Integração do Supabase Incompleta",
-        description: "Por favor, complete a integração do Supabase para continuar.",
-      });
-  };
 
   useEffect(() => {
-    if (user && supabase) {
+    if (user) {
       const fetchProfile = async () => {
         const { data: profile, error } = await supabase
           .from('profiles')
@@ -49,12 +40,10 @@ function App() {
   }, [user, toast]);
 
   const handleLogin = async ({ email, password }) => {
-    if (!supabase) {
-      showIntegrationToast();
-      return;
-    }
-
-    const { data, error } = await authSignIn(email, password);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (error) {
       if (error.message === 'Email not confirmed') {
@@ -64,7 +53,7 @@ function App() {
           variant: "destructive",
           duration: 9000,
         });
-      } else if (error.message !== 'Supabase client not initialized.') {
+      } else {
         toast({
           title: "❌ Erro no login",
           description: "Email ou senha incorretos.",
@@ -134,14 +123,10 @@ function App() {
   };
 
   const handleLogout = async () => {
-    if (!supabase) {
-      showIntegrationToast();
-      return;
-    }
     const userIdToUpdate = currentUserData?.id;
     const userRole = currentUserData?.role;
     
-    await authSignOut();
+    await signOut();
     setCurrentUserData(null);
     sessionStorage.removeItem('activeAttendanceId');
 

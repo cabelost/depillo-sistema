@@ -12,10 +12,6 @@ export const useUserStatus = (currentUser, depiladorasStatus, toast) => {
   }, [currentUser, depiladorasStatus]);
 
   const toggleDepiladoraStatus = async (newStatus) => {
-    if (!supabase) {
-        toast({ title: "❌ Integração Incompleta", description: "A integração do Supabase é necessária para mudar o status.", variant: "destructive" });
-        return;
-    }
     if (currentUser.role !== 'depiladora' || !currentUser.id) {
         toast({ title: "❌ Erro de Autenticação", description: "Usuário não identificado para mudar o status.", variant: "destructive" });
         return;
